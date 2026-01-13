@@ -18,7 +18,7 @@ dependencies = [
     "pillow>=12.0.0",
     "psutil>=7.1.3",
     "py-spy>=0.4.1",
-    "scalene>=1.5.55",
+    "scalene>=2.0.1",
     "tqdm>=4.67.1",
 ]
 
