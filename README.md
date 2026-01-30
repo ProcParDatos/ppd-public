@@ -1,6 +1,6 @@
  # Materiales de la asignatura Procesamiento Paralelo de Datos (UPCT - UMU) 
 
-# Instalación de WSL para usuarios con Windows. 
+# Uso de WSL para usuarios con Windows. 
 # Instala Ubuntu como subsistema Linux. Tenemos que ejecutar:
 wsl --install Ubuntu
 
