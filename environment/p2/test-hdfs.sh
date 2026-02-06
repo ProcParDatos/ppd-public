@@ -10,14 +10,25 @@ fi
 
 : "${HDFS_MOUNT_USER:=luser}"
 
-MOUNT_DIR="${1:-/media/hdfs}"
-if [ "${MOUNT_DIR}" != "/" ]; then
-  MOUNT_DIR="${MOUNT_DIR%/}"
+if [ "$#" -gt 1 ]; then
+  echo "Uso: $(basename "$0") [test_file]"
+  echo "Este script no acepta carpeta de montaje; usa siempre \$HOME/hdfs."
+  exit 1
 fi
-TEST_FILE="${2:-hello-$(date +%Y%m%d%H%M%S)-$$.txt}"
+
+TARGET_USER="${SUDO_USER:-$(id -un)}"
+TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
+if [ -z "${TARGET_HOME}" ]; then
+  echo "No se pudo resolver el home para el usuario: ${TARGET_USER}"
+  exit 1
+fi
+
+MOUNT_DIR="${TARGET_HOME}/hdfs"
+TEST_FILE="${1:-hello-$(date +%Y%m%d%H%M%S)-$$.txt}"
 TEST_CONTENT="hello hdfs $(date -Iseconds)"
 TEST_PATH="${MOUNT_DIR}/${TEST_FILE}"
 HDFS_PATH="/user/${HDFS_MOUNT_USER}/${TEST_FILE}"
+MOUNT_SCRIPT="${SCRIPT_DIR}/mount-hdfs.sh"
 
 is_mounted() {
   mountpoint -q "$1" 2>/dev/null
@@ -32,12 +43,11 @@ run_with_timeout() {
 }
 
 mount_with_retry() {
-  local dir="$1"
   local tries=10
   local delay=3
   local attempt=1
   while [ "${attempt}" -le "${tries}" ]; do
-    if ./mount-hdfs.sh "${dir}"; then
+    if run_mount; then
       return 0
     fi
     echo "==> Mount failed (attempt ${attempt}/${tries}), retrying in ${delay}s..."
@@ -45,6 +55,22 @@ mount_with_retry() {
     attempt=$((attempt + 1))
   done
   return 1
+}
+
+run_mount() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "${MOUNT_SCRIPT}" mount
+  else
+    sudo "${MOUNT_SCRIPT}" mount
+  fi
+}
+
+run_umount() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "${MOUNT_SCRIPT}" umount
+  else
+    sudo "${MOUNT_SCRIPT}" umount
+  fi
 }
 
 check_mount_write() {
@@ -61,11 +87,15 @@ check_mount_write() {
 
 try_unmount() {
   local dir="$1"
-  if sudo umount "${dir}"; then
+  if run_umount; then
     return 0
   fi
   echo "==> Regular umount failed, trying lazy umount"
-  sudo umount -l "${dir}"
+  if [ "$(id -u)" -eq 0 ]; then
+    umount -l "${dir}"
+  else
+    sudo umount -l "${dir}"
+  fi
 }
 
 ensure_mount() {
@@ -79,10 +109,10 @@ ensure_mount() {
         echo "==> Failed to unmount ${dir}. Close any processes using it and retry."
         exit 1
       fi
-      mount_with_retry "${dir}"
+      mount_with_retry
     fi
   else
-    mount_with_retry "${dir}"
+    mount_with_retry
   fi
 }
 
@@ -121,7 +151,7 @@ if [ -e "${TEST_PATH}" ]; then
   if ! run_with_timeout cat "${TEST_PATH}" >/dev/null 2>&1; then
     echo "==> ${TEST_PATH} looks stale, remounting"
     try_unmount "${MOUNT_DIR}"
-    ./mount-hdfs.sh "${MOUNT_DIR}"
+    run_mount
   fi
 fi
 
