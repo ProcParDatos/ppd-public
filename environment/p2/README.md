@@ -1,15 +1,15 @@
 # Environment P2 - Hadoop-MapReduce (Docker Compose) – x86_64 y ARM64 –
 
-# Este entorno se instala utilizando docker
-# Para obtener más información sobre docker (8 minutos en ingles) https://youtu.be/JSLpG_spOBM
-# En concreto usamos docker compose, una extensión de Docker que permite orquestación, es decir, definir y gestionar en un único archivo (docker-compose.yml)
-# varios servicios/contenedores, sus redes y volúmenes, para levantarlos y coordinarlos juntos con un solo comando.
+Este entorno se instala utilizando docker
+Para obtener más información sobre docker (8 minutos en ingles) https://youtu.be/JSLpG_spOBM
+En concreto usamos docker compose, una extensión de Docker que permite orquestación, es decir, definir y gestionar en un único archivo (docker-compose.yml)
+varios servicios/contenedores, sus redes y volúmenes, para levantarlos y coordinarlos juntos con un solo comando.
 
-# A groso modo los pasos a realizar seran
-# Arrancar un cluster Hadoop virtual con `docker compose up`
-# Montar el sistema de ficheros Hadoop (HDFS) en tu máquina como si fuese una carpeta local (vía **HDFS NFS Gateway**).
-# De esta forma vas a poder trabajar con HDFS como si se tratase de una caja negra, simplemente como si se tratase de un disco mas.
-# Aun así lo podemos administrar a traves de la URI del NameNode, lanzar programas con MapReduce y gestionar YARN así como JobHistory
+A groso modo los pasos a realizar seran
+Arrancar un cluster Hadoop virtual con `docker compose up`
+Montar el sistema de ficheros Hadoop (HDFS) en tu máquina como si fuese una carpeta local (vía **HDFS NFS Gateway**).
+De esta forma vas a poder trabajar con HDFS como si se tratase de una caja negra, simplemente como si se tratase de un disco mas.
+Aun así lo podemos administrar a traves de la URI del NameNode, lanzar programas con MapReduce y gestionar YARN así como JobHistory
 
 ## Requisitos
 - Docker Desktop o Docker Engine + Docker Compose plugin.
@@ -49,16 +49,17 @@ Instala cliente NFS:
 
 ```bash
 
-./mount-hdfs.sh ./hdfs
+./mount-hdfs.sh mount
 
 # Puedes ejecutar el siguiente script para comprobar que funciona correctamente
 # Este script comprueba que hdfs este montado, crea un fichero de prueba,
 # desmonta Hadoop, lo relanza y comprueba que el fichero siga existiendo
 
-./test-hdfs.sh ./hdfs
+./test-hdfs.sh ~/hdfs
 
 # Para desmontar completamente mas adelante ejecuta:
-# sudo umount -l ./hdfs
+# sudo umount -l ~/hdfs
+# o ./mount-hdfs.sh umount
 
 ```
 
