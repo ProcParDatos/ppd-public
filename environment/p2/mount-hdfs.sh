@@ -9,6 +9,7 @@ if [ -f "${SCRIPT_DIR}/.env" ]; then
 fi
 
 : "${HDFS_MOUNT_USER:=luser}"
+# Debe coincidir con nfs.export.point en hdfs-site.xml.
 : "${HDFS_NFS_EXPORT:=/user/${HDFS_MOUNT_USER}}"
 
 if [ "$#" -ne 1 ]; then
@@ -25,8 +26,6 @@ if [ "${ACTION}" != "mount" ] && [ "${ACTION}" != "umount" ]; then
 fi
 
 TARGET_USER="${SUDO_USER:-$(id -un)}"
-TARGET_UID="$(id -u "${TARGET_USER}")"
-TARGET_GID="$(id -g "${TARGET_USER}")"
 TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
 
 if [ -z "${TARGET_HOME}" ]; then
@@ -37,19 +36,27 @@ fi
 MOUNT_DIR="${TARGET_HOME}/hdfs"
 EXPORT_PATH="${HDFS_NFS_EXPORT}"
 
-if [ "${ACTION}" = "mount" ]; then
-  if [ "$(id -u)" -eq 0 ]; then
-    install -d -m 755 -o "${TARGET_UID}" -g "${TARGET_GID}" "$MOUNT_DIR"
-  else
-    mkdir -p "$MOUNT_DIR"
+if [ "$(id -u)" -eq 0 ]; then
+  MOUNT_CMD=(mount)
+  UMOUNT_CMD=(umount)
+else
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "Este script necesita root o sudo para montar/desmontar NFS."
+    exit 1
   fi
+  MOUNT_CMD=(sudo mount)
+  UMOUNT_CMD=(sudo umount)
+fi
+
+if [ "${ACTION}" = "mount" ]; then
+  mkdir -p "$MOUNT_DIR"
 
   echo "Montando HDFS (vía NFS) en: $MOUNT_DIR"
   echo "Export: ${EXPORT_PATH}"
   echo "Necesitas nfs-common (Debian/Ubuntu) o nfs-utils (Fedora/RHEL)."
   echo
 
-  mount -t nfs -o nfsvers=3,proto=tcp,mountproto=tcp,port=2049,mountport=4242,nolock,noacl,soft,timeo=2,retrans=2 127.0.0.1:"${EXPORT_PATH}" "$MOUNT_DIR"
+  "${MOUNT_CMD[@]}" -t nfs -o nfsvers=3,proto=tcp,mountproto=tcp,port=2049,mountport=4242,nolock,noacl,soft,timeo=2,retrans=2 127.0.0.1:"${EXPORT_PATH}" "$MOUNT_DIR"
 
   echo
   echo "OK. Prueba: ls -la $MOUNT_DIR"
@@ -59,7 +66,7 @@ fi
 
 echo "Desmontando HDFS en: $MOUNT_DIR"
 if mountpoint -q "${MOUNT_DIR}" 2>/dev/null; then
-  umount "${MOUNT_DIR}"
+  "${UMOUNT_CMD[@]}" "${MOUNT_DIR}"
   echo "OK. Desmontado: ${MOUNT_DIR}"
 else
   echo "Nada que desmontar: ${MOUNT_DIR} no esta montado."

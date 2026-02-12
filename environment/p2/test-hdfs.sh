@@ -16,6 +16,12 @@ if [ "$#" -gt 1 ]; then
   exit 1
 fi
 
+if [ "$(id -u)" -eq 0 ]; then
+  echo "No ejecutes $(basename "$0") con sudo ni como root."
+  echo "Ejecutalo como usuario normal: ./$(basename "$0") [test_file]"
+  exit 1
+fi
+
 TARGET_USER="${SUDO_USER:-$(id -un)}"
 TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
 if [ -z "${TARGET_HOME}" ]; then

@@ -192,7 +192,7 @@ case "$ROLE" in
     # NFS Gateway en modo no seguro debe iniciarse como el usuario proxy (aquí hdadmin)
     su - hdadmin -c "hdfs --daemon start nfs3"
 
-    log "NFS listo. Monta en tu equipo: sudo mount -t nfs -o vers=3,proto=tcp,nolock,sync localhost:/  ./hdfs"
+    log "NFS listo. Monta en tu equipo: sudo mount -t nfs -o vers=3,proto=tcp,nolock,sync localhost:/user/${HDFS_MOUNT_USER:-luser} ./hdfs"
     tail -f /dev/null
     ;;
   workbench)

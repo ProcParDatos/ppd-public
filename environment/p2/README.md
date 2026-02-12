@@ -49,13 +49,13 @@ Instala cliente NFS:
 
 ```bash
 
-./mount-hdfs.sh mount
+sudo ./mount-hdfs.sh mount
 
 # Puedes ejecutar el siguiente script para comprobar que funciona correctamente
 # Este script comprueba que hdfs este montado, crea un fichero de prueba,
 # desmonta Hadoop, lo relanza y comprueba que el fichero siga existiendo
 
-./test-hdfs.sh ~/hdfs
+./test-hdfs.sh
 
 # Para desmontar completamente mas adelante ejecuta:
 # sudo umount -l ~/hdfs
