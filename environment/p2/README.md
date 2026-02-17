@@ -16,11 +16,19 @@ Aun así lo podemos administrar a traves de la URI del NameNode, lanzar programa
 - Preferiblemente Linux, o Windows con WSL2 (igual que la práctica).
 - Cliente NFS en el host (para montar la carpeta).
 
+
+## 0) Instala docker
+
+Os proporcionamos un script para instalar docker (install_docker.sh)
+Es posible que tengas que cerrar y abrir WSL - Ubuntu después de instalar docker para que funcione correctamente.
+También podéis seguir algún proceso de instalación paso a paso como este:  https://docs.docker.com/engine/install/ubuntu/
+
 ## 1) Arrancar el cluster
 
 ```bash
 
 # Para arrancar el sistema HDFS
+# Puedes usar el script "start.sh", que contiene esta línea de código:
 docker compose up -d --build
 
 
