@@ -111,7 +111,12 @@ init_hdfs_dirs() {
   su - hdadmin -c "hdfs dfs -test -d /user/hdadmin || hdfs dfs -mkdir -p /user/hdadmin"
   su - hdadmin -c "hdfs dfs -test -d /user/${USER} || hdfs dfs -mkdir -p /user/${USER}"
   su - hdadmin -c "hdfs dfs -chown ${USER}:supergroup /user/${USER} || true"
-  su - hdadmin -c "hdfs dfs -chmod 700 /user/${USER} || true"
+  # Entorno docente: lectura global por defecto sin abrir escritura.
+  su - hdadmin -c "hdfs dfs -chmod 755 /user/${USER} || true"
+  # Reaplica visibilidad sobre contenido existente al reiniciar el cluster.
+  su - hdadmin -c "hdfs dfs -chmod -R a+rX /user/${USER} || true"
+  # Intenta que nuevas entradas hereden permisos de lectura global (si ACL esta habilitado).
+  su - hdadmin -c "hdfs dfs -setfacl -m default:user::rwx,default:group::r-x,default:other::r-x /user/${USER}" || true
 
   su - hdadmin -c "hdfs dfs -test -d /tmp/hadoop-yarn/staging || hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging"
   su - hdadmin -c "hdfs dfs -chmod -R 1777 /tmp || true"
