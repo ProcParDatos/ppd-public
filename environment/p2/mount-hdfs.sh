@@ -11,6 +11,8 @@ fi
 : "${HDFS_MOUNT_USER:=luser}"
 # Debe coincidir con nfs.export.point en hdfs-site.xml.
 : "${HDFS_NFS_EXPORT:=/user/${HDFS_MOUNT_USER}}"
+# Para estabilidad: evita "soft,timeo=2" (puede provocar EIO en copias largas).
+: "${HDFS_NFS_MOUNT_OPTS:=nfsvers=3,proto=tcp,mountproto=tcp,port=2049,mountport=4242,nolock,noacl,hard,timeo=150,retrans=5}"
 
 if [ "$#" -ne 1 ]; then
   echo "Uso: $(basename "$0") <mount|umount>"
@@ -53,10 +55,11 @@ if [ "${ACTION}" = "mount" ]; then
 
   echo "Montando HDFS (vía NFS) en: $MOUNT_DIR"
   echo "Export: ${EXPORT_PATH}"
+  echo "Opciones NFS: ${HDFS_NFS_MOUNT_OPTS}"
   echo "Necesitas nfs-common (Debian/Ubuntu) o nfs-utils (Fedora/RHEL)."
   echo
 
-  "${MOUNT_CMD[@]}" -t nfs -o nfsvers=3,proto=tcp,mountproto=tcp,port=2049,mountport=4242,nolock,noacl,soft,timeo=2,retrans=2 127.0.0.1:"${EXPORT_PATH}" "$MOUNT_DIR"
+  "${MOUNT_CMD[@]}" -t nfs -o "${HDFS_NFS_MOUNT_OPTS}" 127.0.0.1:"${EXPORT_PATH}" "$MOUNT_DIR"
 
   echo
   echo "OK. Prueba: ls -la $MOUNT_DIR"

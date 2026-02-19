@@ -41,11 +41,12 @@ UIs:
 - JobHistory: http://localhost:19888
 
 # Comprobaciones NFS
+```bash
 nc -vz 127.0.0.1 2049
 nc -vz 127.0.0.1 4242
 docker compose exec nfsgateway id -u luser
 docker compose exec nfsgateway id -g luser
-
+```
 
 ## 2) Montar HDFS como carpeta local
 
@@ -73,6 +74,15 @@ sudo ./mount-hdfs.sh mount
 
 A partir de aquí, todo lo que copies a `./hdfs` se guarda en HDFS dentro de `/user/luser` (export point).
 
+NOTA: Para cargas grandes (muchos ficheros o ficheros pesados), si necesitas máxima robustez, usa `./upload-hdfs.sh` en vez de `cp` sobre NFS.
+Este script usa `hdfs dfs -put` internamente que es mucho más estable que NFS.
+
+```bash
+./upload-hdfs.sh ./libros
+# O indicando destino:
+./upload-hdfs.sh ./libros /user/luser/datasets
+```
+
 ## 4) Puedes Ejecutar comandos HDFS / YARN (sin administración extra)
 
 Entra al contenedor “workbench”:
@@ -91,8 +101,8 @@ yarn jar $MAPRED_EXAMPLES/hadoop-mapreduce-examples-*.jar pi 16 1000
 El NFS gateway está configurado para laboratorio local (hosts `*` y proxyuser `*`).
 
 
-# Para detener el sistema HDFS
+# Para detener el sistema HDFS (script `stop.sh`)
 docker compose down
 
-# Para borrar todos los contenedores y volumenes (se borrarán también los datos que hayas copiado a HDFS)
+# Para borrar todos los contenedores y volumenes (se borrarán también los datos que hayas copiado a HDFS) (script `cleanup.sh`)
 docker compose down --volumes --remove-orphans --rmi local
