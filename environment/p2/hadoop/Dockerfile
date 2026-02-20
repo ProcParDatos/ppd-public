@@ -15,9 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       bash ca-certificates curl tini procps netcat-openbsd \
       openssh-client openssh-server sudo vim-tiny \
       maven \
+      python3 python3-pip python3-venv \
       rpcbind nfs-common \
 
     && rm -rf /var/lib/apt/lists/*
+
+# Librerias Python usadas en las practicas de P2 (MapReduce/PySpark auxiliares).
+RUN python3 -m pip install --no-cache-dir \
+      "mrjob>=0.7.4" \
+      "pyarrow>=14.0.0"
 
 # Descargar Hadoop (es Java, el binario sirve para amd64 y arm64)
 # Intentamos primero downloads.apache.org y si falla, hacemos fallback a archive.apache.org.

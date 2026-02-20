@@ -12,6 +12,7 @@ TARGET_PATH="${1:-/}"
 RECOVER_RETRIES="${2:-5}"
 NAMENODE_SERVICE="${HDFS_RECOVERY_NAMENODE_SERVICE:-namenode}"
 HDFS_SUPERUSER="${HDFS_RECOVERY_SUPERUSER:-hdadmin}"
+ALLOW_EMACS_LOCK_CLEANUP="${HDFS_RECOVERY_REMOVE_EMACS_LOCKS:-1}"
 COMPOSE=(docker compose -f "${SCRIPT_DIR}/docker-compose.yml")
 
 usage() {
@@ -53,6 +54,16 @@ list_open_files() {
     '
 }
 
+get_open_files_or_die() {
+  local raw_output
+  if ! raw_output="$(list_open_files 2>&1)"; then
+    echo "${raw_output}" >&2
+    echo "No se pudo listar ficheros abiertos. Verifica Docker Compose y permisos de acceso al daemon." >&2
+    exit 2
+  fi
+  mapfile -t OPEN_FILES_BUFFER < <(printf '%s\n' "${raw_output}" | sed '/^$/d')
+}
+
 run_recover_lease() {
   local path="$1"
   local recover_cmd
@@ -61,8 +72,23 @@ run_recover_lease() {
   "${COMPOSE[@]}" exec -T "${NAMENODE_SERVICE}" su - "${HDFS_SUPERUSER}" -c "${recover_cmd}"
 }
 
+remove_hdfs_path() {
+  local path="$1"
+  local rm_cmd
+  printf -v rm_cmd "hdfs dfs -rm -skipTrash %q" "${path}"
+  "${COMPOSE[@]}" exec -T "${NAMENODE_SERVICE}" su - "${HDFS_SUPERUSER}" -c "${rm_cmd}"
+}
+
+is_emacs_lock_file() {
+  local path="$1"
+  local base="${path##*/}"
+  [[ "${base}" == \#*\# ]]
+}
+
 echo "Buscando ficheros abiertos bajo: ${TARGET_PATH}"
-mapfile -t open_files < <(list_open_files)
+OPEN_FILES_BUFFER=()
+get_open_files_or_die
+open_files=("${OPEN_FILES_BUFFER[@]}")
 
 if [ "${#open_files[@]}" -eq 0 ]; then
   echo "No hay ficheros abiertos pendientes."
@@ -78,23 +104,38 @@ for path in "${open_files[@]}"; do
   echo "Recuperando lease: ${path}"
   if output="$(run_recover_lease "${path}" 2>&1)"; then
     echo "${output}"
-    if printf '%s\n' "${output}" | grep -qi "recoverLease returned true"; then
+    if printf '%s\n' "${output}" | grep -Eqi "recoverLease SUCCEEDED|recoverLease returned true"; then
       recovered=$((recovered + 1))
-    elif printf '%s\n' "${output}" | grep -qi "recoverLease returned false"; then
-      failed=$((failed + 1))
-    else
-      # Comportamiento inesperado: se revalida en el resumen final.
-      :
+      continue
     fi
-  else
-    echo "${output}"
-    failed=$((failed + 1))
+    if printf '%s\n' "${output}" | grep -qi "recoverLease returned false"; then
+      failed=$((failed + 1))
+      continue
+    fi
+    # Comportamiento inesperado: se revalida en el resumen final.
+    continue
   fi
+
+  echo "${output}"
+  if printf '%s\n' "${output}" | grep -q "URISyntaxException" \
+    && is_emacs_lock_file "${path}" \
+    && [ "${ALLOW_EMACS_LOCK_CLEANUP}" = "1" ]; then
+    echo "Fallback: eliminando lock temporal de Emacs con caracteres no URI: ${path}"
+    if rm_output="$(remove_hdfs_path "${path}" 2>&1)"; then
+      echo "${rm_output}"
+      recovered=$((recovered + 1))
+      continue
+    fi
+    echo "${rm_output}"
+  fi
+  failed=$((failed + 1))
 done
 
 echo
 echo "Revalidando leases abiertas..."
-mapfile -t remaining_files < <(list_open_files)
+OPEN_FILES_BUFFER=()
+get_open_files_or_die
+remaining_files=("${OPEN_FILES_BUFFER[@]}")
 
 if [ "${#remaining_files[@]}" -eq 0 ]; then
   echo "OK. No quedan ficheros abiertos."
