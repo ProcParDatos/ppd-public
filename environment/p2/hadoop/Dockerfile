@@ -3,13 +3,15 @@ ARG HADOOP_VERSION=3.3.6
 FROM eclipse-temurin:11-jdk-jammy
 
 ARG HADOOP_VERSION
+ARG SPARK_VERSION=4.0.2
 ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+ENV SPARK_HOME=/opt/spark
 ENV JAVA_HOME=/opt/java/openjdk
-ENV PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin
+ENV PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:/opt/spark/bin:/opt/spark/sbin
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash ca-certificates curl tini procps netcat-openbsd \
@@ -23,7 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Librerias Python usadas en las practicas de P2 (MapReduce/PySpark auxiliares).
 RUN python3 -m pip install --no-cache-dir \
       "mrjob>=0.7.4" \
-      "pyarrow>=14.0.0"
+      "pyarrow>=14.0.0" \
+      "pyspark==${SPARK_VERSION}"
 
 # Descargar Hadoop (es Java, el binario sirve para amd64 y arm64)
 # Intentamos primero downloads.apache.org y si falla, hacemos fallback a archive.apache.org.
@@ -38,6 +41,17 @@ RUN set -eux; \
     # directorios básicos
     mkdir -p /data/hdfs/namenode /data/hdfs/datanode /data/tmp /data/yarn/local /data/yarn/log; \
     mkdir -p /var/run/sshd
+
+# Instalar Spark standalone para comandos spark-submit/spark-shell en workbench.
+RUN set -eux; \
+    spark_pkg="spark-${SPARK_VERSION}-bin-hadoop3"; \
+    tgz="${spark_pkg}.tgz"; \
+    url1="https://downloads.apache.org/spark/spark-${SPARK_VERSION}/${tgz}"; \
+    url2="https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/${tgz}"; \
+    curl -fSL "${url1}" -o /tmp/spark.tgz || curl -fSL "${url2}" -o /tmp/spark.tgz; \
+    tar -xzf /tmp/spark.tgz -C /opt; \
+    mv "/opt/${spark_pkg}" "${SPARK_HOME}"; \
+    rm -f /tmp/spark.tgz
 
 # Usuarios (usaremos los nombres de la práctica: hdadmin y luser)
 RUN groupadd -r hadoop && \
