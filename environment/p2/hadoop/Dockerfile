@@ -1,6 +1,8 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 ARG HADOOP_VERSION=3.3.6
-FROM eclipse-temurin:11-jdk-jammy
+# Fallback manual si la version fijada deja de estar disponible:
+# FROM eclipse-temurin:11-jdk-jammy
+FROM eclipse-temurin:11.0.29_7-jdk-jammy
 
 ARG HADOOP_VERSION
 ARG SPARK_VERSION=3.5.5
@@ -24,8 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Librerias Python usadas en las practicas de P2 (MapReduce/PySpark auxiliares).
 RUN python3 -m pip install --no-cache-dir \
-      "mrjob>=0.7.4" \
-      "pyarrow>=14.0.0" \
+      "mrjob==0.7.4" \
+      "pyarrow==14.0.2" \
       "pyspark==${SPARK_VERSION}"
 
 # Descargar Hadoop (es Java, el binario sirve para amd64 y arm64)

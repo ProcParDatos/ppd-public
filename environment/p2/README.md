@@ -6,7 +6,8 @@ En concreto usamos docker compose, una extensión de Docker que permite orquesta
 varios servicios/contenedores, sus redes y volúmenes, para levantarlos y coordinarlos juntos con un solo comando.
 
 A groso modo los pasos a realizar seran
-Arrancar un cluster Hadoop virtual con `docker compose up`
+Construir la imagen del cluster Hadoop virtual una sola vez con `./rebuild.sh`
+Arrancar el cluster en usos posteriores con `./start.sh`
 Montar el sistema de ficheros Hadoop (HDFS) en tu máquina como si fuese una carpeta local (vía **HDFS NFS Gateway**).
 De esta forma vas a poder trabajar con HDFS como si se tratase de una caja negra, simplemente como si se tratase de un disco mas.
 Aun así lo podemos administrar a traves de la URI del NameNode, lanzar programas con MapReduce y gestionar YARN así como JobHistory
@@ -27,13 +28,17 @@ También podéis seguir algún proceso de instalación paso a paso como este:  h
 
 ```bash
 
-# Para arrancar el sistema HDFS
-# Puedes usar el script "start.sh", que contiene esta línea de código:
-docker compose up -d --build
+# Primer arranque, o tras cambios en Dockerfile/docker-compose:
+./rebuild.sh
+
+# Arranques normales posteriores:
+./start.sh
 
 
 ##### Comprobaciones para ver si está funcionando ####
 ```
+
+`start.sh` no reconstruye la imagen. `rebuild.sh` fuerza el build de la imagen local `hadoop-lab`.
 
 UIs:
 - HDFS NameNode: http://localhost:9870
@@ -104,5 +109,6 @@ El NFS gateway está configurado para laboratorio local (hosts `*` y proxyuser `
 # Para detener el sistema HDFS (script `stop.sh`)
 docker compose down
 
-# Para borrar todos los contenedores y volumenes (se borrarán también los datos que hayas copiado a HDFS) (script `cleanup.sh`)
+# Para borrar todos los contenedores, volumenes e imagenes locales (se borrarán también los datos que hayas copiado a HDFS) (script `cleanup.sh`)
+# Si ejecutas cleanup.sh, el siguiente arranque requerirá volver a ejecutar ./rebuild.sh
 docker compose down --volumes --remove-orphans --rmi local
